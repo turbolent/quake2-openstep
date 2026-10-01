@@ -58,6 +58,7 @@ cvar_t		*scr_graphheight;
 cvar_t		*scr_graphscale;
 cvar_t		*scr_graphshift;
 cvar_t		*scr_drawall;
+static cvar_t *cl_showfps;
 
 typedef struct
 {
@@ -420,6 +421,7 @@ void SCR_Init (void)
 	scr_graphscale = Cvar_Get ("graphscale", "1", 0);
 	scr_graphshift = Cvar_Get ("graphshift", "0", 0);
 	scr_drawall = Cvar_Get ("scr_drawall", "0", 0);
+	cl_showfps = Cvar_Get ("cl_showfps", "0", CVAR_ARCHIVE);
 
 //
 // register our commands
@@ -1256,6 +1258,56 @@ void SCR_DrawLayout (void)
 
 //=======================================================
 
+/* Average actual screen updates over half a second, including presentation time. */
+static char scr_fps_text[32];
+
+static void SCR_UpdateFPS (void)
+{
+	static unsigned int start;
+	static int frames;
+	static qboolean active;
+	unsigned int now, elapsed;
+
+	if (!cl_showfps->value)
+	{
+		active = false;
+		scr_fps_text[0] = 0;
+		return;
+	}
+
+	now = (unsigned int)Sys_Milliseconds();
+	if (!active)
+	{
+		active = true;
+		start = now;
+		frames = 0;
+		strcpy (scr_fps_text, "-- FPS");
+		return;
+	}
+
+	frames++;
+	elapsed = now - start;
+	if (elapsed >= 500)
+	{
+		Com_sprintf (scr_fps_text, sizeof(scr_fps_text), "%.1f FPS",
+			frames * 1000.0 / elapsed);
+		start = now;
+		frames = 0;
+	}
+}
+
+static void SCR_DrawFPS (void)
+{
+	int x;
+
+	if (!scr_fps_text[0])
+		return;
+	x = viddef.width - 8 - strlen(scr_fps_text) * 8;
+	DrawString (x, 8, scr_fps_text);
+	SCR_AddDirtyPoint (x, 8);
+	SCR_AddDirtyPoint (viddef.width - 1, 15);
+}
+
 /*
 ==================
 SCR_UpdateScreen
@@ -1306,6 +1358,8 @@ void SCR_UpdateScreen (void)
 		separation[1] = 0;
 		numframes = 1;
 	}
+
+	SCR_UpdateFPS ();
 
 	for ( i = 0; i < numframes; i++ )
 	{
@@ -1395,6 +1449,7 @@ void SCR_UpdateScreen (void)
 			M_Draw ();
 
 			SCR_DrawLoading ();
+			SCR_DrawFPS ();
 		}
 	}
 	re.EndFrame();
