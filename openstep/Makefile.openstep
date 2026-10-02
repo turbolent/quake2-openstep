@@ -1,6 +1,7 @@
 CC = cc
-CFLAGS = -O2 -g -DC_ONLY -Dstricmp=strcasecmp -DGAME_HARD_LINKED -DREF_HARD_LINKED
 LDFLAGS = -sectcreate __ICON __header quake2.iconheader -segprot __ICON r r -sectcreate __ICON app quake2.tiff -framework AppKit -framework Foundation -F/NextLibrary/PrivateFrameworks -framework Interceptor
+# Preserve the legacy code's type punning and signed wraparound assumptions.
+CFLAGS = -O2 -g -fno-strict-aliasing -fwrapv -DC_ONLY -Dstricmp=strcasecmp -DGAME_HARD_LINKED -DREF_HARD_LINKED
 ODIR = output
 EXE = $(ODIR)/quake2
 APP = $(ODIR)/quake2.app
