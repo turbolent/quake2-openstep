@@ -26,6 +26,7 @@ extern void PSsetmouse(float x, float y);
 extern void PScurrentmouse(int window, float *x, float *y);
 extern void PShidecursor(void);
 extern void PSshowcursor(void);
+extern void PSWait(void);
 
 cvar_t *in_mouse, *in_joystick;
 static cvar_t *m_filter;
@@ -34,6 +35,16 @@ static unsigned mouse_buttons;
 static NSPoint mouse_origin;
 static float old_mouse_x, old_mouse_y;
 static double total_x, total_y;
+
+static void IN_ShowCursor(void)
+{
+    if (cursor_hidden) {
+        PSshowcursor();
+        /* Complete the display-server request before exit can close DPS. */
+        PSWait();
+        cursor_hidden = false;
+    }
+}
 
 static qboolean IN_CanCapture(void)
 {
@@ -73,18 +84,22 @@ void IN_DeactivateMouse(void)
     for (i = 0; i < 2; i++)
         if (buttons & (1 << i))
             Key_Event(K_MOUSE1 + i, false, Sys_Milliseconds());
-    if (cursor_hidden) {
-        PSshowcursor();
-        cursor_hidden = false;
-    }
+    IN_ShowCursor();
     old_mouse_x = old_mouse_y = 0;
     mlooking = false;
 }
 
 void IN_ActivateMouse(void)
 {
+    static qboolean exit_registered;
+
     if (mouse_active || !IN_CanCapture())
         return;
+    /* Register after AppKit opens DPS, so this runs before its exit cleanup. */
+    if (!exit_registered) {
+        atexit(IN_ShowCursor);
+        exit_registered = true;
+    }
     [vid_view_i lockFocus];
     IN_CenterMouse();
     [vid_view_i unlockFocus];

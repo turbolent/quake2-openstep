@@ -1,4 +1,5 @@
 #include <libc.h>
+#include <signal.h>
 #import <AppKit/AppKit.h>
 #include "../qcommon/qcommon.h"
 #include "in_openstep.h"
@@ -6,6 +7,13 @@
 int		curtime;
 int		sys_frame_time;
 qboolean stdin_active = true;
+static volatile sig_atomic_t quit_requested;
+
+static void Sys_RequestQuit(int signal_number)
+{
+    /* AppKit and engine cleanup must run on the main loop, not in a signal. */
+    quit_requested = 1;
+}
 
 void	Sys_UnloadGame (void)
 {
@@ -257,6 +265,8 @@ void Sys_Error (char *error, ...)
 	va_list		argptr;
 	char		string[1024];
 
+    IN_DeactivateMouse();
+
 // change stdin to non blocking
 	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
 
@@ -311,6 +321,7 @@ Sys_Quit
 */
 void Sys_Quit (void)
 {
+    IN_DeactivateMouse();
 // change stdin to blocking
 	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
 
@@ -328,6 +339,8 @@ Sys_Init
 */
 void Sys_Init(void)
 {
+    signal(SIGINT, Sys_RequestQuit);
+    signal(SIGTERM, Sys_RequestQuit);
     moncontrol(0);	// turn off profiling except during real Quake work
 
 // change stdin to non blocking
@@ -467,6 +480,9 @@ void main (int argc, char **argv)
     while (1)
     {
         pool =[[NSAutoreleasePool alloc] init];
+
+        if (quit_requested)
+            Com_Quit();
 
         if (++frame > 10)
             moncontrol(1);// profile only while we do each Quake frame
