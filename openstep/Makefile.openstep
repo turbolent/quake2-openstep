@@ -15,7 +15,7 @@ OPENSTEPFILES = $(ODIR)/cd_null.o $(ODIR)/in_openstep.o $(ODIR)/snddma_null.o $(
 
 FILES = $(SERVERFILES) $(GAMEFILES) $(COMMONFILES) $(CLIENTFILES) $(REFSOFTFILES) $(SHAREDFILES) $(OPENSTEPFILES)
 
-.PHONY: all app clean test
+.PHONY: all app clean
 
 all: $(ODIR) $(EXE) app
 
@@ -31,17 +31,13 @@ app: $(EXE) quake2.tiff
 	cp quake2.tiff $(APP)/icon.tiff
 
 clean:
-	rm -f $(EXE) $(FILES) $(APP)/quake2 $(APP)/icon.tiff $(ODIR)/pixels_test
+	rm -f $(EXE) $(FILES) $(APP)/quake2 $(APP)/icon.tiff
 
 $(FILES): | $(ODIR)
 $(FILES): Makefile.openstep ../game/q_shared.h ../qcommon/qcommon.h
-$(ODIR)/swimp_openstep.o: InterceptorPrivate.h swimp_pixels.h
-
-$(ODIR)/pixels_test: tests/pixels_test.c swimp_pixels.h | $(ODIR)
-	$(CC) -Wall -o $@ tests/pixels_test.c
-
-test: $(ODIR)/pixels_test
-	$(ODIR)/pixels_test
+$(ODIR)/swimp_openstep.o: InterceptorPrivate.h swimp_pixels.h in_openstep.h
+$(ODIR)/in_openstep.o: in_openstep.h ../client/client.h
+$(ODIR)/sys_openstep.o: in_openstep.h
 
 $(ODIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<

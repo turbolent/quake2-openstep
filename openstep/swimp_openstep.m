@@ -3,6 +3,7 @@
 #include "../ref_soft/r_local.h"
 #include "../client/keys.h"
 #include "swimp_pixels.h"
+#include "in_openstep.h"
 
 extern void Key_ClearStates(void);
 extern void PSWait(void);
@@ -69,6 +70,7 @@ int SWimp_Init(void *hInstance, void *wndProc)
 
 void SWimp_Shutdown(void)
 {
+    IN_DeactivateMouse();
     /* Detach delegates and release the bitmap before its window. AppKit
      * notifications must never call into a view that has been freed. */
     if (vid_window_i) {
@@ -206,8 +208,10 @@ void SWimp_EndFrame(void)
 
 void SWimp_AppActivate(qboolean active)
 {
-    if (!active)
+    if (!active) {
+        IN_DeactivateMouse();
         Key_ClearStates();
+    }
     bitmap_dirty = true;
 }
 
@@ -260,6 +264,7 @@ static int TranslateKey(NSEvent *event)
 - (void)windowDidMove:(NSNotification *)note
 {
     NSRect rect;
+    IN_DeactivateMouse();
     rect = [NSWindow contentRectForFrameRect:[vid_window_i frame]
                                  styleMask:[vid_window_i styleMask]];
     ri.Cvar_SetValue("vid_xpos", rect.origin.x);
@@ -272,12 +277,35 @@ static int TranslateKey(NSEvent *event)
 }
 - (void)windowDidResignKey:(NSNotification *)note
 {
+    IN_DeactivateMouse();
     oldFlags = 0;
     Key_ClearStates();
 }
 - (void)windowDidDeminiaturize:(NSNotification *)note
 {
     bitmap_dirty = true;
+}
+- (void)windowWillMiniaturize:(NSNotification *)note
+{
+    IN_DeactivateMouse();
+    oldFlags = 0;
+    Key_ClearStates();
+}
+- (void)mouseDown:(NSEvent *)event
+{
+    IN_MouseButton(0, true);
+}
+- (void)mouseUp:(NSEvent *)event
+{
+    IN_MouseButton(0, false);
+}
+- (void)rightMouseDown:(NSEvent *)event
+{
+    IN_MouseButton(1, true);
+}
+- (void)rightMouseUp:(NSEvent *)event
+{
+    IN_MouseButton(1, false);
 }
 - (void)keyDown:(NSEvent *)event
 {

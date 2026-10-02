@@ -1,6 +1,7 @@
 #include <libc.h>
 #import <AppKit/AppKit.h>
 #include "../qcommon/qcommon.h"
+#include "in_openstep.h"
 
 int		curtime;
 int		sys_frame_time;
@@ -365,6 +366,8 @@ void Sys_SendKeyEvents (void)
 		if (event)
 			[NSApp	sendEvent: event];
 	} while (event);
+
+    IN_Frame();
 
     // grab frame time
     sys_frame_time = Sys_Milliseconds();
