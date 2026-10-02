@@ -79,14 +79,16 @@ void D_WarpScreen (void)
 
 	for (v=0 ; v<h ; v++, dest += vid.rowbytes)
 	{
-		col = &column[turb[v]];
+		// Screen coordinates can exceed the sine table at high resolutions.
+		// Wrap each lookup within the repeating turbulence cycle.
+		col = &column[turb[v & (CYCLE-1)]];
 		row = &rowptr[v];
 		for (u=0 ; u<w ; u+=4)
 		{
-			dest[u+0] = row[turb[u+0]][col[u+0]];
-			dest[u+1] = row[turb[u+1]][col[u+1]];
-			dest[u+2] = row[turb[u+2]][col[u+2]];
-			dest[u+3] = row[turb[u+3]][col[u+3]];
+			dest[u+0] = row[turb[(u+0) & (CYCLE-1)]][col[u+0]];
+			dest[u+1] = row[turb[(u+1) & (CYCLE-1)]][col[u+1]];
+			dest[u+2] = row[turb[(u+2) & (CYCLE-1)]][col[u+2]];
+			dest[u+3] = row[turb[(u+3) & (CYCLE-1)]][col[u+3]];
 		}
 	}
 }
