@@ -1,7 +1,7 @@
 CC = cc
-LDFLAGS = -sectcreate __ICON __header quake2.iconheader -segprot __ICON r r -sectcreate __ICON app quake2.tiff -framework AppKit -framework Foundation -F/NextLibrary/PrivateFrameworks -framework Interceptor
 # Preserve the legacy code's type punning and signed wraparound assumptions.
 CFLAGS = -O2 -g -fno-strict-aliasing -fwrapv -DC_ONLY -Dstricmp=strcasecmp -DGAME_HARD_LINKED -DREF_HARD_LINKED
+LDFLAGS = -sectcreate __ICON __header quake2.iconheader -segprot __ICON r r -sectcreate __ICON app quake2.tiff -framework AppKit -framework Foundation -framework SoundKit -F/NextLibrary/PrivateFrameworks -framework Interceptor
 ODIR = output
 EXE = $(ODIR)/quake2
 APP = $(ODIR)/quake2.app
@@ -12,7 +12,7 @@ CLIENTFILES = $(ODIR)/cl_ents.o $(ODIR)/cl_fx.o $(ODIR)/cl_input.o $(ODIR)/cl_in
 COMMONFILES = $(ODIR)/m_flash.o $(ODIR)/cmd.o $(ODIR)/cmodel.o $(ODIR)/common.o $(ODIR)/crc.o $(ODIR)/cvar.o $(ODIR)/files.o $(ODIR)/md4.o $(ODIR)/net_chan.o $(ODIR)/net_udp.o $(ODIR)/pmove.o
 REFSOFTFILES = $(ODIR)/r_aclip.o $(ODIR)/r_alias.o $(ODIR)/r_bsp.o $(ODIR)/r_draw.o $(ODIR)/r_edge.o $(ODIR)/r_image.o $(ODIR)/r_light.o $(ODIR)/r_main.o $(ODIR)/r_misc.o $(ODIR)/r_model.o $(ODIR)/r_part.o $(ODIR)/r_polyse.o $(ODIR)/r_poly.o $(ODIR)/r_rast.o $(ODIR)/r_scan.o $(ODIR)/r_sprite.o $(ODIR)/r_surf.o
 SHAREDFILES = $(ODIR)/q_shared.o
-OPENSTEPFILES = $(ODIR)/cd_null.o $(ODIR)/in_openstep.o $(ODIR)/snddma_null.o $(ODIR)/sys_openstep.o $(ODIR)/vid_openstep.o $(ODIR)/swimp_openstep.o
+OPENSTEPFILES = $(ODIR)/cd_null.o $(ODIR)/in_openstep.o $(ODIR)/snddma_openstep.o $(ODIR)/sys_openstep.o $(ODIR)/vid_openstep.o $(ODIR)/swimp_openstep.o
 
 FILES = $(SERVERFILES) $(GAMEFILES) $(COMMONFILES) $(CLIENTFILES) $(REFSOFTFILES) $(SHAREDFILES) $(OPENSTEPFILES)
 
@@ -39,6 +39,7 @@ $(FILES): Makefile.openstep ../game/q_shared.h ../qcommon/qcommon.h
 $(ODIR)/swimp_openstep.o: InterceptorPrivate.h swimp_pixels.h in_openstep.h
 $(ODIR)/in_openstep.o: in_openstep.h ../client/client.h
 $(ODIR)/sys_openstep.o: in_openstep.h
+$(ODIR)/snddma_openstep.o: ../client/client.h ../client/snd_loc.h
 
 $(ODIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
