@@ -320,6 +320,19 @@ int Sys_Milliseconds (void)
 Sys_Error
 ================
 */
+@interface QuakeFatalAlert : NSObject
+@end
+
+@implementation QuakeFatalAlert
+- (void)showAlert:(NSTimer *)timer
+{
+    [NSApp activateIgnoringOtherApps:YES];
+    NSRunAlertPanel(@"Fatal error", @"%@", @"Exit", nil, nil,
+                   [timer userInfo]);
+    exit(1);
+}
+@end
+
 void Sys_Error (char *error, ...)
 {
 	va_list		argptr;
@@ -339,10 +352,14 @@ void Sys_Error (char *error, ...)
 	{	// appkit isn't running, so don't try to pop up a panel
 		exit (1);
 	}
-        NSRunAlertPanel (@"Fatal error",[NSString stringWithCString: string]
-                         ,@"exit",NULL,NULL);
-	[NSApp terminate: NULL];
-        exit(1);
+    /* The game pumps events itself; enter AppKit's run loop before showing
+     * a modal alert so its Exit button can stop the nested modal loop. */
+    [NSTimer scheduledTimerWithTimeInterval:0
+        target:[[[QuakeFatalAlert alloc] init] autorelease]
+        selector:@selector(showAlert:)
+        userInfo:[NSString stringWithCString:string] repeats:NO];
+    [NSApp run];
+    exit(1);
 }
 
 /*
