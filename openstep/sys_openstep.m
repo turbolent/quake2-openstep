@@ -1,5 +1,7 @@
 #include <libc.h>
 #include <signal.h>
+#include <sys/stat.h>
+#include "../linux/glob.h"
 #import <AppKit/AppKit.h>
 #include "../qcommon/qcommon.h"
 #include "in_openstep.h"
@@ -217,18 +219,76 @@ void Sys_Mkdir (char *path)
 		Com_Error (ERR_FATAL, "mkdir %s: %s",path, strerror(errno));
 }
 
-char	*Sys_FindFirst (char *path, unsigned musthave, unsigned canthave)
+/* Retain the directory snapshot across the main loop's autorelease pools. */
+static NSArray *find_names;
+static unsigned find_index;
+static char find_base[MAX_OSPATH], find_pattern[MAX_OSPATH];
+static char find_path[MAX_OSPATH];
+
+char *Sys_FindNext(unsigned musthave, unsigned canthave)
 {
+    const char *name;
+    struct stat st;
+    unsigned attributes;
+
+    while (find_names && find_index < [find_names count]) {
+        name = [[find_names objectAtIndex:find_index++] cString];
+        if (!strcmp(name, ".") || !strcmp(name, ".."))
+            continue;
+        if (!glob_match(find_pattern, (char *)name))
+            continue;
+        if (strlen(find_base) + strlen(name) + 2 > sizeof(find_path))
+            continue;
+        sprintf(find_path, "%s/%s", find_base, name);
+        if (stat(find_path, &st) < 0)
+            continue;
+        attributes = 0;
+        if ((st.st_mode & S_IFMT) == S_IFDIR) attributes |= SFF_SUBDIR;
+        if (name[0] == '.') attributes |= SFF_HIDDEN;
+        if (!(st.st_mode & 0222)) attributes |= SFF_RDONLY;
+        if ((st.st_mode & S_IFMT) != S_IFDIR &&
+            (st.st_mode & S_IFMT) != S_IFREG)
+            attributes |= SFF_SYSTEM;
+        if ((attributes & musthave) != musthave || (attributes & canthave))
+            continue;
+        return find_path;
+    }
     return NULL;
 }
 
-char	*Sys_FindNext (unsigned musthave, unsigned canthave)
+char *Sys_FindFirst(char *path, unsigned musthave, unsigned canthave)
 {
-    return NULL;
+    char *slash;
+
+    if (find_names)
+        Sys_Error("Sys_FindFirst without Sys_FindClose");
+    if (strlen(path) >= sizeof(find_base))
+        return NULL;
+    strcpy(find_base, path);
+    slash = strrchr(find_base, '/');
+    if (slash) {
+        strcpy(find_pattern, slash + 1);
+        if (slash == find_base)
+            slash[1] = 0;
+        else
+            *slash = 0;
+    } else {
+        strcpy(find_pattern, find_base);
+        strcpy(find_base, ".");
+    }
+    if (!find_pattern[0] || !strcmp(find_pattern, "*.*"))
+        strcpy(find_pattern, "*");
+    find_index = 0;
+    find_names = [[[NSFileManager defaultManager] directoryContentsAtPath:
+        [NSString stringWithCString:find_base]] retain];
+    return Sys_FindNext(musthave, canthave);
 }
 
-void	Sys_FindClose (void)
+void Sys_FindClose(void)
 {
+    [find_names release];
+    find_names = nil;
+    find_index = 0;
 }
 
 /*
@@ -458,9 +518,21 @@ static void Sys_BundleDirectory(int argc, char **argv)
         return;
     *slash = 0;
     length = strlen(path);
-    if (length >= 4 && !strcmp(path + length - 4, ".app"))
+    if (length >= 4 && !strcmp(path + length - 4, ".app")) {
         if (chdir(path) < 0)
             Sys_Error("Cannot enter application bundle: %s", path);
+        if (access("baseq2/pak0.pak", R_OK) < 0 &&
+            access("baseq2/pics/colormap.pcx", R_OK) < 0) {
+            [NSApplication sharedApplication];
+            [NSApp finishLaunching];
+            NSRunAlertPanel(@"Game data required",
+                @"Copy the .pak files from your Quake II baseq2 folder into "
+                 "quake2.app/baseq2, then launch the game again. "
+                 "See README.txt inside the application for details.",
+                @"Quit", nil, nil);
+            exit(0);
+        }
+    }
 }
 
 void main (int argc, char **argv)

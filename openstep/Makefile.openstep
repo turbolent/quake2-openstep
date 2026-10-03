@@ -1,10 +1,12 @@
-CC = cc
+CC = gcc-4.2
 # Preserve the legacy code's type punning and signed wraparound assumptions.
 CFLAGS = -O2 -g -fno-strict-aliasing -fwrapv -DC_ONLY -Dstricmp=strcasecmp -DGAME_HARD_LINKED -DREF_HARD_LINKED
 LDFLAGS = -sectcreate __ICON __header quake2.iconheader -segprot __ICON r r -sectcreate __ICON app quake2.tiff -framework AppKit -framework Foundation -framework SoundKit -F/NextLibrary/PrivateFrameworks -framework Interceptor
 ODIR = output
 EXE = $(ODIR)/quake2
 APP = $(ODIR)/quake2.app
+APP_ARCHIVE = $(ODIR)/quake2.app.tar.gz
+SOURCE_ARCHIVE = $(ODIR)/quake2-source.tar.gz
 
 SERVERFILES = $(ODIR)/sv_ccmds.o $(ODIR)/sv_ents.o $(ODIR)/sv_game.o $(ODIR)/sv_init.o $(ODIR)/sv_main.o $(ODIR)/sv_send.o $(ODIR)/sv_user.o $(ODIR)/sv_world.o
 GAMEFILES = $(ODIR)/g_ai.o $(ODIR)/g_chase.o $(ODIR)/g_cmds.o $(ODIR)/g_combat.o $(ODIR)/g_func.o $(ODIR)/g_items.o $(ODIR)/g_main.o $(ODIR)/g_misc.o $(ODIR)/g_monster.o $(ODIR)/g_phys.o $(ODIR)/g_save.o $(ODIR)/g_spawn.o $(ODIR)/g_svcmds.o $(ODIR)/g_target.o $(ODIR)/g_trigger.o $(ODIR)/g_utils.o $(ODIR)/g_weapon.o $(ODIR)/g_turret.o $(ODIR)/m_actor.o $(ODIR)/m_berserk.o $(ODIR)/m_boss2.o $(ODIR)/m_boss3.o $(ODIR)/m_boss31.o $(ODIR)/m_boss32.o $(ODIR)/m_brain.o $(ODIR)/m_chick.o $(ODIR)/m_flipper.o $(ODIR)/m_float.o $(ODIR)/m_flyer.o $(ODIR)/m_gladiator.o $(ODIR)/m_gunner.o $(ODIR)/m_hover.o $(ODIR)/m_infantry.o $(ODIR)/m_insane.o $(ODIR)/m_medic.o $(ODIR)/m_move.o $(ODIR)/m_mutant.o $(ODIR)/m_parasite.o $(ODIR)/m_soldier.o $(ODIR)/m_supertank.o $(ODIR)/m_tank.o $(ODIR)/p_client.o $(ODIR)/p_hud.o $(ODIR)/p_trail.o $(ODIR)/p_view.o $(ODIR)/p_weapon.o
@@ -12,11 +14,11 @@ CLIENTFILES = $(ODIR)/cl_ents.o $(ODIR)/cl_fx.o $(ODIR)/cl_input.o $(ODIR)/cl_in
 COMMONFILES = $(ODIR)/m_flash.o $(ODIR)/cmd.o $(ODIR)/cmodel.o $(ODIR)/common.o $(ODIR)/crc.o $(ODIR)/cvar.o $(ODIR)/files.o $(ODIR)/md4.o $(ODIR)/net_chan.o $(ODIR)/net_udp.o $(ODIR)/pmove.o
 REFSOFTFILES = $(ODIR)/r_aclip.o $(ODIR)/r_alias.o $(ODIR)/r_bsp.o $(ODIR)/r_draw.o $(ODIR)/r_edge.o $(ODIR)/r_image.o $(ODIR)/r_light.o $(ODIR)/r_main.o $(ODIR)/r_misc.o $(ODIR)/r_model.o $(ODIR)/r_part.o $(ODIR)/r_polyse.o $(ODIR)/r_poly.o $(ODIR)/r_rast.o $(ODIR)/r_scan.o $(ODIR)/r_sprite.o $(ODIR)/r_surf.o
 SHAREDFILES = $(ODIR)/q_shared.o
-OPENSTEPFILES = $(ODIR)/cd_null.o $(ODIR)/in_openstep.o $(ODIR)/snddma_openstep.o $(ODIR)/sys_openstep.o $(ODIR)/vid_openstep.o $(ODIR)/swimp_openstep.o
+OPENSTEPFILES = $(ODIR)/cd_null.o $(ODIR)/glob.o $(ODIR)/in_openstep.o $(ODIR)/snddma_openstep.o $(ODIR)/sys_openstep.o $(ODIR)/vid_openstep.o $(ODIR)/swimp_openstep.o
 
 FILES = $(SERVERFILES) $(GAMEFILES) $(COMMONFILES) $(CLIENTFILES) $(REFSOFTFILES) $(SHAREDFILES) $(OPENSTEPFILES)
 
-.PHONY: all app clean
+.PHONY: all app clean package package-app package-source
 
 all: $(ODIR) $(EXE) app
 
@@ -26,10 +28,22 @@ $(ODIR):
 $(EXE): $(FILES) quake2.iconheader quake2.tiff
 	$(CC) -o $(EXE) $(FILES) $(LDFLAGS)
 
-app: $(EXE) quake2.tiff
+app: $(EXE) quake2.tiff README.txt config.cfg ../gnu.txt
 	test -d $(APP) || mkdir $(APP)
 	cp $(EXE) $(APP)/quake2
 	cp quake2.tiff $(APP)/icon.tiff
+	cp README.txt $(APP)/README.txt
+	cp ../gnu.txt $(APP)/COPYING
+	test -d $(APP)/baseq2 || mkdir $(APP)/baseq2
+	test -f $(APP)/baseq2/config.cfg || cp config.cfg $(APP)/baseq2/config.cfg
+
+package: package-app package-source
+
+package-app: app package.sh
+	/bin/sh ./package.sh app "$(APP)" "$(APP_ARCHIVE)"
+
+package-source: package.sh
+	/bin/sh ./package.sh source "$(SOURCE_ARCHIVE)"
 
 clean:
 	rm -f $(EXE) $(FILES) $(APP)/quake2 $(APP)/icon.tiff
@@ -38,7 +52,7 @@ $(FILES): | $(ODIR)
 $(FILES): Makefile.openstep ../game/q_shared.h ../qcommon/qcommon.h
 $(ODIR)/swimp_openstep.o: InterceptorPrivate.h swimp_pixels.h in_openstep.h
 $(ODIR)/in_openstep.o: in_openstep.h ../client/client.h
-$(ODIR)/sys_openstep.o: in_openstep.h
+$(ODIR)/sys_openstep.o: in_openstep.h ../linux/glob.h
 $(ODIR)/snddma_openstep.o: ../client/client.h ../client/snd_loc.h
 
 $(ODIR)/%.o: %.c
@@ -66,4 +80,7 @@ $(ODIR)/%.o: %.m
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(ODIR)/net_udp.o: ../linux/net_udp.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(ODIR)/glob.o: ../linux/glob.c ../linux/glob.h
 	$(CC) $(CFLAGS) -c -o $@ $<
