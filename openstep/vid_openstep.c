@@ -71,6 +71,8 @@ void VID_NewWindow (int width, int height)
 {
         viddef.width = width;
         viddef.height = height;
+        /* A paused view still contains the previous framebuffer dimensions. */
+        cl.force_refdef = true;
 }
 
 /*
@@ -174,12 +176,18 @@ void	VID_MenuInit (void)
 void	VID_MenuDraw (void)
 {
     extern void M_Print(int x, int y, char *text);
-    M_Print(72, 64, "Windowed video");
-    M_Print(24, 88, "Use the console to set video:");
-    M_Print(32, 112, "sw_mode 0: 320 x 240");
-    M_Print(32, 128, "sw_mode 2: 512 x 384");
-    M_Print(32, 144, "sw_mode 3: 640 x 480");
-    M_Print(32, 176, "Press Escape to return");
+    M_Print(112, 24, "Video");
+    M_Print(24, 56, "Use the console to set video:");
+    M_Print(32, 80, "vid_mode 0: 320 x 240");
+    M_Print(32, 96, "vid_mode 3: 640 x 480");
+    M_Print(32, 112, "vid_mode 6: 1024 x 768");
+    M_Print(32, 128, "vid_mode 7: 1152 x 864");
+    M_Print(32, 144, "vid_mode 8: 1280 x 960");
+    M_Print(32, 160, "vid_mode 9: 1600 x 1200");
+    M_Print(32, 184, "vid_fullscreen 1: fullscreen");
+    M_Print(32, 200, "vid_fullscreen 0: windowed");
+    M_Print(32, 216, "Option-Enter toggles fullscreen");
+    M_Print(32, 232, "Press Escape to return");
 }
 
 const char *VID_MenuKey( int k)

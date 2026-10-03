@@ -4,6 +4,7 @@
 /* Include the engine's qboolean definition before this header. */
 void IN_MouseButton(int button, qboolean down);
 void IN_DeactivateMouse(void);
+void IN_SetFullscreen(qboolean enabled);
 void IN_Frame(void);
 
 #endif

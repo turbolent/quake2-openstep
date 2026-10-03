@@ -6,6 +6,9 @@
 #include "../qcommon/qcommon.h"
 #include "in_openstep.h"
 
+extern void SWimp_Shutdown(void);
+extern qboolean SWimp_HandleKeyEvent(NSEvent *event);
+
 int		curtime;
 int		sys_frame_time;
 qboolean stdin_active = true;
@@ -338,6 +341,8 @@ void Sys_Error (char *error, ...)
 	va_list		argptr;
 	char		string[1024];
 
+    SWimp_Shutdown();
+    IN_SetFullscreen(false);
     IN_DeactivateMouse();
 
 // change stdin to non blocking
@@ -398,6 +403,7 @@ Sys_Quit
 */
 void Sys_Quit (void)
 {
+    IN_SetFullscreen(false);
     IN_DeactivateMouse();
 // change stdin to blocking
 	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
@@ -453,7 +459,7 @@ void Sys_SendKeyEvents (void)
             untilDate:		date
             inMode:			@"NSDefaultRunLoopMode"
             dequeue:		YES];
-		if (event)
+		if (event && !SWimp_HandleKeyEvent(event))
 			[NSApp	sendEvent: event];
 	} while (event);
 

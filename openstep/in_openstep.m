@@ -31,6 +31,7 @@ extern void PSWait(void);
 cvar_t *in_mouse, *in_joystick;
 static cvar_t *m_filter;
 static qboolean initialized, mouse_active, cursor_hidden, mlooking;
+static qboolean fullscreen;
 static unsigned mouse_buttons;
 static NSPoint mouse_origin;
 static float old_mouse_x, old_mouse_y;
@@ -46,11 +47,43 @@ static void IN_ShowCursor(void)
     }
 }
 
+static qboolean IN_WindowActive(void)
+{
+    return vid_window_i && vid_view_i
+        && [NSApp isActive] && [vid_window_i isKeyWindow]
+        && [vid_window_i isVisible] && ![vid_window_i isMiniaturized];
+}
+
+static void IN_UpdateCursor(void)
+{
+    static qboolean exit_registered;
+
+    /* Raw framebuffer drawing also needs the cursor hidden in game menus. */
+    if (mouse_active || (fullscreen && IN_WindowActive())) {
+        if (!cursor_hidden) {
+            /* Run before AppKit closes its display-server connection. */
+            if (!exit_registered) {
+                atexit(IN_ShowCursor);
+                exit_registered = true;
+            }
+            PShidecursor();
+            PSWait();
+            cursor_hidden = true;
+        }
+    } else {
+        IN_ShowCursor();
+    }
+}
+
+void IN_SetFullscreen(qboolean enabled)
+{
+    fullscreen = enabled;
+    IN_UpdateCursor();
+}
+
 static qboolean IN_CanCapture(void)
 {
-    return initialized && in_mouse->value && vid_window_i && vid_view_i
-        && [NSApp isActive] && [vid_window_i isKeyWindow]
-        && [vid_window_i isVisible] && ![vid_window_i isMiniaturized]
+    return initialized && in_mouse->value && IN_WindowActive()
         && cls.state == ca_active && cl.refresh_prepped
         && cls.key_dest == key_game && !cls.disable_screen;
 }
@@ -84,28 +117,20 @@ void IN_DeactivateMouse(void)
     for (i = 0; i < 2; i++)
         if (buttons & (1 << i))
             Key_Event(K_MOUSE1 + i, false, Sys_Milliseconds());
-    IN_ShowCursor();
+    IN_UpdateCursor();
     old_mouse_x = old_mouse_y = 0;
     mlooking = false;
 }
 
 void IN_ActivateMouse(void)
 {
-    static qboolean exit_registered;
-
     if (mouse_active || !IN_CanCapture())
         return;
-    /* Register after AppKit opens DPS, so this runs before its exit cleanup. */
-    if (!exit_registered) {
-        atexit(IN_ShowCursor);
-        exit_registered = true;
-    }
     [vid_view_i lockFocus];
     IN_CenterMouse();
     [vid_view_i unlockFocus];
-    PShidecursor();
-    cursor_hidden = true;
     mouse_active = true;
+    IN_UpdateCursor();
     old_mouse_x = old_mouse_y = 0;
 }
 
@@ -212,6 +237,7 @@ void IN_Init(void)
 
 void IN_Shutdown(void)
 {
+    fullscreen = false;
     IN_DeactivateMouse();
     initialized = false;
     Cmd_RemoveCommand("+mlook");

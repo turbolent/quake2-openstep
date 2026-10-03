@@ -104,4 +104,46 @@ static int Q2_PixelBlit(unsigned char *dst, int dst_stride,
     return 1;
 }
 
+/* Nearest-neighbor scaling without a division for every output pixel. */
+static int Q2_PixelBlitScaled(unsigned char *dst, int dst_stride,
+                              int dst_width, int dst_height,
+                              const unsigned char *src, int src_stride,
+                              int width, int height, q2_pixel_layout layout,
+                              const unsigned char native[256][4])
+{
+    int x, y, sx, sy, step, remainder, error, bytes;
+    const unsigned char *row, *color;
+    unsigned char *out;
+
+    bytes = Q2_PixelBytes(layout);
+    if (!dst || !src || !bytes || width <= 0 || height <= 0 ||
+        dst_width <= 0 || dst_height <= 0 || src_stride < width ||
+        dst_stride / bytes < dst_width)
+        return 0;
+    step = width / dst_width;
+    remainder = width % dst_width;
+    for (y = 0; y < dst_height; y++) {
+        sy = y * height / dst_height;
+        out = dst + y * dst_stride;
+        /* Read source RAM again for repeated rows, never mapped video RAM. */
+        row = src + sy * src_stride;
+        sx = error = 0;
+        for (x = 0; x < dst_width; x++) {
+            color = native[row[sx]];
+            if (bytes == 4)
+                memcpy(out, color, 4);
+            else
+                memcpy(out, color, 2);
+            out += bytes;
+            sx += step;
+            error += remainder;
+            if (error >= dst_width) {
+                error -= dst_width;
+                sx++;
+            }
+        }
+    }
+    return 1;
+}
+
 #endif

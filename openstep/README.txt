@@ -24,19 +24,24 @@ Controls and settings
 ---------------------
 Use the game's menus to configure controls. Escape releases the mouse to the
 menus; quitting restores the desktop cursor. The initial window is 640x480.
+Option-Enter toggles fullscreen. Fullscreen uses the desktop resolution and
+scales the selected rendering resolution to fit, preserving its aspect ratio.
+Black bars fill any remaining space. Switching applications releases the screen.
 
 Enter these commands in the console (the backtick key):
   vid_mode 3        640x480
   vid_mode 6        1024x768
   vid_mode 8        1280x960
+  vid_fullscreen 1  Fullscreen
+  vid_fullscreen 0  Windowed
   cl_showfps 1      Show frame rate
   s_khz 44; snd_restart     Request 44.1 kHz sound
   s_khz 22; snd_restart     Request 22.05 kHz sound
 
 Sound uses 16-bit stereo output at a rate supported by the device. The sound
-quality menu may select 22.05 kHz; use the console for 44.1 kHz. Windowed
-software rendering is supported. CD audio, OpenGL, and loadable game mods are
-not included in this build.
+quality menu may select 22.05 kHz; use the console for 44.1 kHz. Windowed and
+fullscreen software rendering are supported. CD audio, OpenGL, and loadable
+game mods are not included in this build.
 
 Source and build
 ----------------

@@ -7,7 +7,14 @@
 @interface NSSimpleBitmap : NSObject
 - (char *)data;
 - (int)bytesPerRow;
+- (int)pixelsWide;
+- (int)pixelsHigh;
 - pixelEncoding;
+@end
+
+@interface NSFramebuffer : NSSimpleBitmap
+- (id)initFromScreen:(int)screen andMapIfPossible:(char)flag;
+- (char)isMappable;
 @end
 
 @interface NSDirectBitmap : NSSimpleBitmap
