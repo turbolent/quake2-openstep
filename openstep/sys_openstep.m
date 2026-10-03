@@ -586,10 +586,14 @@ void main (int argc, char **argv)
         if (quit_requested)
             Com_Quit();
 
+        /* Qcommon_Frame rounds zero up to 1 ms, so wait for real time. */
+        do {
+            t = Sys_Milliseconds();
+        } while (t - oldtime < 1);
+
         if (++frame > 10)
             moncontrol(1);// profile only while we do each Quake frame
 
-		t = Sys_Milliseconds ();
         Qcommon_Frame (t - oldtime);
 		oldtime = t;
         moncontrol(0);
