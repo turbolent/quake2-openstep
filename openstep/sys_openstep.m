@@ -499,6 +499,22 @@ char *Sys_ConsoleInput (void)
 main
 =============
 */
+@interface QuakeDataAlert : NSObject
+@end
+
+@implementation QuakeDataAlert
+- (void)applicationDidFinishLaunching:(NSNotification *)notification
+{
+    [NSApp activateIgnoringOtherApps:YES];
+    NSRunAlertPanel(@"Game data required",
+        @"Copy the .pak files from your Quake II baseq2 folder into "
+         "quake2.app/baseq2, then launch the game again. "
+         "See README.txt inside the application for details.",
+        @"Quit", nil, nil);
+    exit(0);
+}
+@end
+
 /* Workspace may launch bundles with an unrelated working directory.
  * Keep explicit +set basedir and ordinary command-line cwd semantics intact. */
 static void Sys_BundleDirectory(int argc, char **argv)
@@ -524,12 +540,9 @@ static void Sys_BundleDirectory(int argc, char **argv)
         if (access("baseq2/pak0.pak", R_OK) < 0 &&
             access("baseq2/pics/colormap.pcx", R_OK) < 0) {
             [NSApplication sharedApplication];
-            [NSApp finishLaunching];
-            NSRunAlertPanel(@"Game data required",
-                @"Copy the .pak files from your Quake II baseq2 folder into "
-                 "quake2.app/baseq2, then launch the game again. "
-                 "See README.txt inside the application for details.",
-                @"Quit", nil, nil);
+            [NSApp setDelegate:[[[QuakeDataAlert alloc] init] autorelease]];
+            /* stopModal needs a running application beneath the alert. */
+            [NSApp run];
             exit(0);
         }
     }
